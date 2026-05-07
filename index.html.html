@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arcade Grammar Drag-and-Drop Game</title>
+  <style>
+    :root {
+      --cream: #f2f4d3;
+      --olive: #e9eda7;
+      --mustard: #a87d1b;
+      --bluegray: #bfd7d7;
+      --navy: #002338;
+      --green: #58c747;
+      --bright-green: #79ed49;
+      --pink: #ff2b9b;
+      --orange: #ff7900;
+      --white: #ffffff;
+      --shadow: rgba(0, 35, 56, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Comic Sans MS", system-ui, sans-serif;
+      color: var(--navy);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(191, 215, 215, 0.9), transparent 18%),
+        radial-gradient(circle at 82% 25%, rgba(233, 237, 167, 0.9), transparent 22%),
+        linear-gradient(180deg, var(--cream), var(--bluegray));
+    }
+
+    .game {
+      position: relative;
+      min-height: 100vh;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .cloud {
+      position: absolute;
+      width: 170px;
+      height: 58px;
+      background: rgba(255, 255, 255, 0.75);
+      border-radius: 999px;
+      filter: drop-shadow(0 8px 0 rgba(112, 173, 205, 0.35));
+      animation: floatCloud 16s linear infinite;
+      z-index: 0;
+    }
+
+    .cloud::before,
+    .cloud::after {
+      content: "";
+      position: absolute;
+      background: inherit;
+      border-radius: 50%;
+    }
+
+    .cloud::before { width: 72px; height: 72px; left: 28px; top: -32px; }
+    .cloud::after { width: 96px; height: 96px; right: 18px; top: -48px; }
+    .cloud.one { top: 14%; left: -180px; animation-duration: 24s; }
+    .cloud.two { top: 42%; left: -240px; animation-duration: 30s; animation-delay: -12s; transform: scale(1.35); }
+    .cloud.three { top: 8%; left: -220px; animation-duration: 20s; animation-delay: -6s; transform: scale(0.8); }
+
+    @keyframes floatCloud {
+      from { translate: 0 0; }
+      to { translate: calc(100vw + 280px) 0; }
+    }
+
+    header {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .title-card, .student-picker, .score-card, .game-card, .teacher-panel {
+      background: rgba(255, 255, 255, 0.72);
+      border: 4px solid var(--navy);
+      box-shadow: 0 12px 0 var(--navy), 0 18px 28px var(--shadow);
+      border-radius: 28px;
+    }
+
+    .title-card {
+      padding: 18px 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 3.8rem);
+      letter-spacing: 1px;
+      color: var(--navy);
+      text-shadow: 3px 3px 0 var(--olive);
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      font-weight: 800;
+      color: var(--mustard);
+    }
+
+    .student-picker {
+      min-width: 260px;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      background: var(--olive);
+    }
+
+    .student-picker label {
+      font-weight: 900;
+      font-size: 0.95rem;
+    }
+
+    .picker-row {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      gap: 8px;
+    }
+
+    input, textarea {
+      border: 3px solid var(--navy);
+      border-radius: 12px;
+      padding: 8px;
+      font: inherit;
+      font-weight: 800;
+      background: var(--cream);
+      color: var(--navy);
+    }
+
+    button {
+      border: 3px solid var(--navy);
+      border-radius: 999px;
+      background: var(--mustard);
+      color: white;
+      font: inherit;
+      font-weight: 1000;
+      padding: 10px 16px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 var(--navy);
+      transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+    }
+
+    button:hover {
+      filter: brightness(1.1) drop-shadow(0 0 10px rgba(233, 237, 167, 0.8));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 var(--navy);
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 var(--navy);
+    }
+
+    .student-number {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 1000;
+      color: var(--pink);
+      -webkit-text-stroke: 1px var(--navy);
+    }
+
+    main {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .side {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .score-card {
+      padding: 16px;
+      background: var(--bluegray);
+    }
+
+    .score-card h2,
+    .teacher-panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.15rem;
+      font-weight: 1000;
+      margin: 8px 0;
+    }
+
+    .music-toggle { width: 100%; background: var(--navy); }
+    .teacher-toggle { width: 100%; background: var(--orange); }
+
+    .game-card {
+      padding: clamp(16px, 3vw, 28px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(242,244,211,0.88));
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 18px;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .progress {
+      height: 22px;
+      background: var(--bluegray);
+      border: 3px solid var(--navy);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--mustard), var(--pink));
+      transition: width 0.4s ease;
+    }
+
+    .question {
+      padding: 18px;
+      border-radius: 24px;
+      background: var(--navy);
+      color: var(--cream);
+      font-size: clamp(1.25rem, 2.6vw, 2.2rem);
+      font-weight: 1000;
+      line-height: 1.25;
+      text-align: center;
+      box-shadow: inset 0 -8px 0 rgba(255,255,255,0.12);
+    }
+
+    .question small {
+      display: block;
+      margin-top: 10px;
+      color: var(--olive);
+      font-size: 0.75em;
+    }
+
+    .play-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .choices, .drop-zone {
+      min-height: 250px;
+      border: 4px dashed var(--mustard);
+      border-radius: 28px;
+      padding: 18px;
+      background: rgba(233, 237, 167, 0.55);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .section-label {
+      text-align: center;
+      font-weight: 1000;
+      font-size: 1.25rem;
+      color: var(--mustard);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .choice {
+      user-select: none;
+      padding: 18px;
+      border: 4px solid var(--navy);
+      border-radius: 22px;
+      background: var(--white);
+      box-shadow: 0 8px 0 var(--navy);
+      font-size: clamp(1.05rem, 2vw, 1.45rem);
+      font-weight: 1000;
+      cursor: grab;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .choice:hover { transform: translateY(-4px) rotate(-1deg); background: var(--cream); }
+    .choice.dragging { opacity: 0.55; transform: scale(0.95); }
+    .choice.correct { background: #b7f7a7; }
+    .choice.wrong { animation: shake 0.45s; background: #ffd0d0; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-12px); }
+      40% { transform: translateX(12px); }
+      60% { transform: translateX(-8px); }
+      80% { transform: translateX(8px); }
+    }
+
+    .drop-zone {
+      align-items: center;
+      text-align: center;
+      background: rgba(191, 215, 215, 0.62);
+    }
+
+    .drop-target {
+      width: 100%;
+      min-height: 150px;
+      border: 5px solid var(--navy);
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.7);
+      font-size: 1.3rem;
+      font-weight: 1000;
+      padding: 18px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .drop-target.over {
+      transform: scale(1.03);
+      background: var(--olive);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .next-btn { background: var(--pink); display: none; }
+    .try-btn { background: var(--orange); display: none; }
+    .reset-btn { background: var(--navy); }
+
+    .teacher-panel {
+      position: fixed;
+      z-index: 6;
+      left: 22px;
+      bottom: 22px;
+      width: min(620px, calc(100vw - 44px));
+      max-height: 70vh;
+      padding: 16px;
+      overflow: auto;
+      background: var(--cream);
+      display: none;
+    }
+
+    .teacher-panel.show { display: block; }
+    .teacher-panel textarea { width: 100%; min-height: 220px; resize: vertical; }
+
+    .popup {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      place-items: center;
+      background: rgba(0, 35, 56, 0.58);
+      padding: 20px;
+    }
+
+    .popup.show { display: grid; }
+
+    .celebration {
+      position: relative;
+      width: min(92vw, 1050px);
+      height: min(70vh, 560px);
+      border: 8px solid var(--navy);
+      border-radius: 30px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #ffffff 0%, #ffffff 45%, #cff3ff 46%, #ffffff 70%);
+      box-shadow: 0 18px 0 rgba(0,0,0,0.35);
+      animation: popIn 0.35s ease both;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.7) rotate(-2deg); opacity: 0; }
+      to { transform: scale(1) rotate(0); opacity: 1; }
+    }
+
+    .star {
+      position: absolute;
+      width: 92px;
+      height: 92px;
+      background: yellow;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      filter: drop-shadow(3px 3px 0 var(--navy));
+      animation: starBounce 1s ease-in-out infinite alternate;
+    }
+
+    .star.s1 { left: 20%; top: 10%; transform: rotate(-15deg); }
+    .star.s2 { left: 40%; top: 4%; width: 116px; height: 116px; animation-delay: 0.2s; }
+    .star.s3 { left: 62%; top: 11%; animation-delay: 0.4s; }
+    .star.s4 { left: 76%; top: 26%; width: 76px; height: 76px; animation-delay: 0.1s; }
+
+    @keyframes starBounce { to { translate: 0 -16px; } }
+
+    .pop-cloud {
+      position: absolute;
+      background: rgba(191, 215, 215, 0.75);
+      width: 230px;
+      height: 74px;
+      border-radius: 999px;
+      filter: drop-shadow(0 9px 0 rgba(103, 158, 202, 0.45));
+    }
+
+    .pop-cloud::before,
+    .pop-cloud::after {
+      content: "";
+      position: absolute;
+      background: inherit;
+      border-radius: 50%;
+    }
+
+    .pop-cloud::before { width: 95px; height: 95px; left: 42px; top: -42px; }
+    .pop-cloud::after { width: 125px; height: 125px; right: 28px; top: -62px; }
+    .pc1 { left: 8%; top: 34%; transform: scale(1.2); }
+    .pc2 { right: 8%; top: 42%; transform: scale(1.35); }
+    .pc3 { left: 48%; top: 26%; transform: scale(0.9); background: rgba(79, 196, 223, 0.68); }
+
+    .hills {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 32%;
+      background: var(--bright-green);
+      clip-path: ellipse(72% 48% at 28% 90%);
+      border-top: 4px solid var(--navy);
+    }
+
+    .hills::after {
+      content: "";
+      position: absolute;
+      inset: 40px -80px -10px 28%;
+      background: var(--green);
+      clip-path: ellipse(58% 58% at 70% 90%);
+      border-top: 4px solid var(--navy);
+    }
+
+    .feedback-text {
+      position: absolute;
+      left: 50%;
+      bottom: 8%;
+      transform: translateX(-50%) rotate(2deg);
+      width: 94%;
+      text-align: center;
+      font-size: clamp(3.2rem, 11vw, 8rem);
+      line-height: 0.9;
+      font-weight: 1000;
+      color: var(--pink);
+      -webkit-text-stroke: 7px #283064;
+      text-shadow: 9px 9px 0 rgba(0,0,0,0.25), -5px -5px 0 white;
+      z-index: 2;
+    }
+
+    .close-popup {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      z-index: 3;
+      width: 58px;
+      height: 58px;
+      padding: 0;
+      background: rgba(0,35,56,0.75);
+      font-size: 2rem;
+    }
+
+    .confetti {
+      position: fixed;
+      width: 12px;
+      height: 18px;
+      top: -20px;
+      z-index: 20;
+      animation: confettiFall 1.8s ease-in forwards;
+    }
+
+    @keyframes confettiFall {
+      to { transform: translateY(105vh) rotate(760deg); opacity: 0; }
+    }
+
+    .level-complete {
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: 1000;
+      padding: 14px;
+      border-radius: 18px;
+      display: none;
+      background: var(--olive);
+      border: 3px solid var(--navy);
+    }
+
+    @media (max-width: 880px) {
+      body { overflow: auto; }
+      .game { min-height: 100dvh; }
+      header, main, .play-area { grid-template-columns: 1fr; }
+      .student-picker { min-width: 0; }
+      .side { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .side { grid-template-columns: 1fr; }
+      .choice { font-size: 1rem; }
+      .feedback-text { -webkit-text-stroke: 4px #283064; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="cloud one"></div>
+    <div class="cloud two"></div>
+    <div class="cloud three"></div>
+
+    <header>
+      <section class="title-card">
+        <h1>Grammar Arcade</h1>
+        <div class="subtitle">Drag the correct answer into the answer box!</div>
+      </section>
+
+      <section class="student-picker" aria-label="Random student picker">
+        <label for="studentCount">Random Student Picker</label>
+        <div class="picker-row">
+          <input id="studentCount" type="number" min="1" value="30" />
+          <button id="pickStudentBtn">Pick</button>
+        </div>
+        <div class="student-number" id="studentNumber">Student #?</div>
+      </section>
+    </header>
+
+    <main>
+      <aside class="side">
+        
+
+        <section class="score-card">
+          <h2>Controls</h2>
+          <button class="music-toggle" id="musicBtn">♫ Music: Off</button>
+          <button class="teacher-toggle" id="teacherBtn">Teacher Panel</button>
+        </section>
+      </aside>
+
+      <section class="game-card">
+        <div class="progress" aria-label="Progress"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="question" id="questionText"></div>
+
+        <div class="play-area">
+          <section class="choices" id="choices">
+            <div class="section-label">Choices</div>
+          </section>
+
+          <section class="drop-zone">
+            <div class="section-label">Answer Box</div>
+            <div class="drop-target" id="dropTarget">Drop the correct answer here</div>
+          </section>
+        </div>
+
+        <div class="controls">
+          <button class="try-btn" id="tryBtn">Try Again</button>
+          <button class="next-btn" id="nextBtn">Next Question</button>
+          <button class="reset-btn" id="resetBtn">Restart Game</button>
+        </div>
+        <div class="level-complete" id="levelComplete">Level Complete! Great grammar work! 🎆</div>
+      </section>
+    </main>
+  </div>
+
+  <section class="teacher-panel" id="teacherPanel">
+    <h2>Teacher Control Panel</h2>
+    <p>Edit questions as JSON. Use answer value "a" or "b".</p>
+    <textarea id="questionEditor"></textarea>
+    <button id="saveQuestionsBtn">Save Questions</button>
+  </section>
+
+  <div class="popup" id="popup" aria-hidden="true">
+    <div class="celebration">
+      <button class="close-popup" id="closePopup" aria-label="Close celebration">×</button>
+      <div class="pop-cloud pc1"></div>
+      <div class="pop-cloud pc2"></div>
+      <div class="pop-cloud pc3"></div>
+      <div class="star s1"></div>
+      <div class="star s2"></div>
+      <div class="star s3"></div>
+      <div class="star s4"></div>
+      <div class="hills"></div>
+      <div class="feedback-text" id="feedbackText">Very Good!</div>
+    </div>
+  </div>
+
+  <script>
+    const palette = ["#f2f4d3", "#e9eda7", "#a87d1b", "#bfd7d7", "#002338", "#ff2b9b", "#ff7900", "#58c747"];
+
+    let questions = [
+      {
+        prompt: "A pronoun that refers back to the subject is called:",
+        choices: { a: "Reflexive pronoun", b: "Relative pronoun" },
+        answer: "a"
+      },
+      {
+        prompt: "Identify the reflexive pronoun:",
+        quote: "She herself studied.",
+        choices: { a: "She", b: "Herself" },
+        answer: "b"
+      },
+      {
+        prompt: "Which word is a reflexive pronoun?",
+        choices: { a: "Themselves", b: "Them" },
+        answer: "a"
+      },
+      {
+        prompt: "Which sentence shows correct subject–verb agreement with a compound noun?",
+        choices: { a: "The school bus arrive early.", b: "The school bus arrives early." },
+        answer: "b"
+      },
+      {
+        prompt: "Which sentence is correct?",
+        choices: { a: "My brother-in-law cooks dinner.", b: "My brother-in-law cook dinner." },
+        answer: "a"
+      }
+    ];
+
+    let current = 0;
+    let score = 0;
+    let stars = 0;
+    let audioCtx;
+    let musicInterval;
+    let musicOn = false;
+
+    const questionText = document.getElementById("questionText");
+    const choicesEl = document.getElementById("choices");
+    const dropTarget = document.getElementById("dropTarget");
+    const scoreEl = document.getElementById("score");
+    const starsEl = document.getElementById("stars");
+    const questionCountEl = document.getElementById("questionCount");
+    const progressFill = document.getElementById("progressFill");
+    const nextBtn = document.getElementById("nextBtn");
+    const tryBtn = document.getElementById("tryBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const popup = document.getElementById("popup");
+    const closePopup = document.getElementById("closePopup");
+    const feedbackText = document.getElementById("feedbackText");
+    const levelComplete = document.getElementById("levelComplete");
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function playTone(freq, duration, type = "sine", volume = 0.06) {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function successSound() {
+      [523, 659, 784, 1046].forEach((note, i) => setTimeout(() => playTone(note, 0.18, "triangle", 0.08), i * 95));
+    }
+
+    function wrongSound() {
+      playTone(180, 0.22, "sawtooth", 0.05);
+      setTimeout(() => playTone(140, 0.24, "sawtooth", 0.04), 130);
+    }
+
+    function speak(text) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1.25;
+      utterance.volume = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleMusic() {
+      initAudio();
+      musicOn = !musicOn;
+      document.getElementById("musicBtn").textContent = musicOn ? "♫ Music: On" : "♫ Music: Off";
+      if (musicOn) {
+        const melody = [262, 330, 392, 523, 392, 330];
+        let index = 0;
+        musicInterval = setInterval(() => {
+          playTone(melody[index % melody.length], 0.12, "square", 0.018);
+          index++;
+        }, 220);
+      } else {
+        clearInterval(musicInterval);
+      }
+    }
+
+    function renderQuestion() {
+      const q = questions[current];
+      questionText.innerHTML = q.quote ? `${q.prompt}<small>“${q.quote}”</small>` : q.prompt;
+      choicesEl.innerHTML = '<div class="section-label">Choices</div>';
+      dropTarget.textContent = "Drop the correct answer here";
+      dropTarget.classList.remove("over");
+      nextBtn.style.display = "none";
+      tryBtn.style.display = "none";
+      levelComplete.style.display = "none";
+
+      Object.entries(q.choices).forEach(([key, text]) => {
+        const choice = document.createElement("div");
+        choice.className = "choice";
+        choice.draggable = true;
+        choice.dataset.answer = key;
+        choice.textContent = `${key}. ${text}`;
+        choice.addEventListener("dragstart", () => choice.classList.add("dragging"));
+        choice.addEventListener("dragend", () => choice.classList.remove("dragging"));
+        choicesEl.appendChild(choice);
+      });
+
+      updateStats();
+    }
+
+    function updateStats() {
+      scoreEl.textContent = score;
+      starsEl.textContent = `${stars} ⭐`;
+      questionCountEl.textContent = `${current + 1}/${questions.length}`;
+      progressFill.style.width = `${(current / questions.length) * 100}%`;
+    }
+
+    function checkAnswer(choice) {
+      const q = questions[current];
+      initAudio();
+      if (choice.dataset.answer === q.answer) {
+        choice.classList.add("correct");
+        score += 10;
+        stars += 1;
+        const cheers = ["Very good!", "Good job!", "Nice work!", "Perfect!", "Amazing!"];
+        const cheer = cheers[Math.floor(Math.random() * cheers.length)];
+        feedbackText.textContent = cheer;
+        speak(cheer);
+        successSound();
+        launchConfetti();
+        popup.classList.add("show");
+        popup.setAttribute("aria-hidden", "false");
+        nextBtn.style.display = "inline-block";
+        tryBtn.style.display = "none";
+        dropTarget.textContent = choice.textContent;
+        [...document.querySelectorAll(".choice")].forEach(c => c.draggable = false);
+        updateStats();
+      } else {
+        choice.classList.add("wrong");
+        speak("Try again.");
+        wrongSound();
+        tryBtn.style.display = "inline-block";
+        dropTarget.textContent = "Oops! Try again.";
+        setTimeout(() => choice.classList.remove("wrong"), 500);
+      }
+    }
+
+    dropTarget.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropTarget.classList.add("over");
+    });
+
+    dropTarget.addEventListener("dragleave", () => dropTarget.classList.remove("over"));
+
+    dropTarget.addEventListener("drop", e => {
+      e.preventDefault();
+      dropTarget.classList.remove("over");
+      const choice = document.querySelector(".choice.dragging");
+      if (choice) checkAnswer(choice);
+    });
+
+    function launchConfetti() {
+      for (let i = 0; i < 90; i++) {
+        const piece = document.createElement("div");
+        piece.className = "confetti";
+        piece.style.left = Math.random() * 100 + "vw";
+        piece.style.background = palette[Math.floor(Math.random() * palette.length)];
+        piece.style.animationDelay = Math.random() * 0.45 + "s";
+        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 2400);
+      }
+    }
+
+    function nextQuestion() {
+      current++;
+      popup.classList.remove("show");
+      popup.setAttribute("aria-hidden", "true");
+      if (current >= questions.length) {
+        current = questions.length - 1;
+        progressFill.style.width = "100%";
+        levelComplete.style.display = "block";
+        feedbackText.textContent = "Level Complete!";
+        popup.classList.add("show");
+        speak("Level complete! Great grammar work!");
+        launchConfetti();
+        return;
+      }
+      pickStudent();
+      renderQuestion();
+    }
+
+    function resetGame() {
+      current = 0;
+      score = 0;
+      stars = 0;
+      popup.classList.remove("show");
+      renderQuestion();
+    }
+
+    function pickStudent() {
+      const count = Math.max(1, Number(document.getElementById("studentCount").value) || 1);
+      const selected = Math.floor(Math.random() * count) + 1;
+      document.getElementById("studentNumber").textContent = `Student #${selected}`;
+      playTone(880, 0.08, "triangle", 0.04);
+    }
+
+    function loadEditor() {
+      document.getElementById("questionEditor").value = JSON.stringify(questions, null, 2);
+    }
+
+    document.getElementById("pickStudentBtn").addEventListener("click", pickStudent);
+    document.getElementById("musicBtn").addEventListener("click", toggleMusic);
+    document.getElementById("teacherBtn").addEventListener("click", () => {
+      document.getElementById("teacherPanel").classList.toggle("show");
+      loadEditor();
+    });
+    document.getElementById("saveQuestionsBtn").addEventListener("click", () => {
+      try {
+        const edited = JSON.parse(document.getElementById("questionEditor").value);
+        if (!Array.isArray(edited)) throw new Error("Questions must be an array.");
+        questions = edited;
+        resetGame();
+        alert("Questions saved!");
+      } catch (error) {
+        alert("Please check the JSON format. " + error.message);
+      }
+    });
+    closePopup.addEventListener("click", () => popup.classList.remove("show"));
+    popup.addEventListener("click", e => { if (e.target === popup) popup.classList.remove("show"); });
+    nextBtn.addEventListener("click", nextQuestion);
+    tryBtn.addEventListener("click", () => {
+      tryBtn.style.display = "none";
+      dropTarget.textContent = "Drop the correct answer here";
+    });
+    resetBtn.addEventListener("click", resetGame);
+
+    renderQuestion();
+    loadEditor();
+  </script>
+</body>
+</html>
